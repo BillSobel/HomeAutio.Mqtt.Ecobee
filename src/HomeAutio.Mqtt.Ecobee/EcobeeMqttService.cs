@@ -249,7 +249,6 @@ namespace HomeAutio.Mqtt.Ecobee
 
                 // ID
                 thermostatStatus.Status["name"] = thermostat.Name;
-                thermostatStatus.Status["location"] = thermostat.Location.ToString();
                 thermostatStatus.Status["city"] = thermostat.Location.City;
 
                 // Status
