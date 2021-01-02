@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
@@ -24,18 +25,27 @@ namespace HomeAutio.Mqtt.Ecobee
         /// <summary>
         /// Main program entry point.
         /// </summary>
+        /// <param name="argv">Command line arugments.</param>
         /// <returns>Awaitable <see cref="Task" />.</returns>
-        public static async Task Main()
+        public static async Task Main(string[] argv)
         {
             var environmentName = Environment.GetEnvironmentVariable("ENVIRONMENT");
             if (string.IsNullOrEmpty(environmentName))
                 environmentName = "Development";
+
+            // Command line switches
+            var switchMappings = new Dictionary<string, string>()
+            {
+                 { "-r", "mqtt:brokerroot" },
+                 { "-root", "mqtt:brokerroot" }
+            };
 
             // Setup config
             var config = new ConfigurationBuilder()
                 .SetBasePath(Environment.CurrentDirectory)
                 .AddJsonFile("appsettings.json", optional: false)
                 .AddJsonFile($"appsettings.{environmentName}.json", optional: true)
+                .AddCommandLine(argv, switchMappings)
                 .Build();
 
             // Setup logging
@@ -135,14 +145,21 @@ namespace HomeAutio.Mqtt.Ecobee
                                 }).ToList();
 
                             brokerSettings.BrokerTlsSettings = brokerTlsSettings;
-                        }
+                    }
 
-                        return new EcobeeMqttService(
-                            serviceProvider.GetRequiredService<ILogger<EcobeeMqttService>>(),
-                            serviceProvider.GetRequiredService<Client>(),
-                            config.GetValue<string>("ecobee:ecobeeName"),
-                            config.GetValue<int>("ecobee:refreshInterval"),
-                            brokerSettings);
+                    string rootPath = config.GetValue<string>("mqtt:brokerRoot");
+                    if (rootPath != null && rootPath.EndsWith('/'))
+                        rootPath = rootPath.Substring(0, rootPath.Length - 1);
+                    if (string.IsNullOrWhiteSpace(rootPath))
+                        rootPath = null;
+
+                    return new EcobeeMqttService(
+                        serviceProvider.GetRequiredService<ILogger<EcobeeMqttService>>(),
+                        serviceProvider.GetRequiredService<Client>(),
+                        config.GetValue<string>("ecobee:ecobeeName"),
+                        config.GetValue<int>("ecobee:refreshInterval"),
+                        brokerSettings,
+                        rootPath);
                     });
                 });
         }

@@ -41,13 +41,15 @@ namespace HomeAutio.Mqtt.Ecobee
         /// <param name="ecobeeName">The target Ecobee name.</param>
         /// <param name="refreshInterval">The refresh interval.</param>
         /// <param name="brokerSettings">MQTT broker settings.</param>
+        /// <param name="rootPath">MQTT topic root, defaults to 'ecobee'.</param>
         public EcobeeMqttService(
             ILogger<EcobeeMqttService> logger,
             Client ecobeeClient,
             string ecobeeName,
             int refreshInterval,
-            BrokerSettings brokerSettings)
-            : base(logger, brokerSettings, "ecobee/" + ecobeeName)
+            BrokerSettings brokerSettings,
+            string rootPath = null)
+            : base(logger, brokerSettings, rootPath is null ? $"Ecobee/{ecobeeName}" : $"{rootPath}/{ecobeeName}")
         {
             _log = logger;
             _refreshInterval = refreshInterval * 1000;
@@ -221,6 +223,8 @@ namespace HomeAutio.Mqtt.Ecobee
                     SelectionType = "thermostats",
                     SelectionMatch = revisionStatus.ThermostatIdentifier,
                     IncludeEquipmentStatus = true,
+                    IncludeDevice = true,
+                    IncludeLocation = true,
                     IncludeSettings = true,
                     IncludeRuntime = true,
                     IncludeSensors = true,
@@ -242,6 +246,11 @@ namespace HomeAutio.Mqtt.Ecobee
                 {
                     thermostatStatus.EquipmentStatus[device] = "on";
                 }
+
+                // ID
+                thermostatStatus.Status["name"] = thermostat.Name;
+                thermostatStatus.Status["location"] = thermostat.Location.ToString();
+                thermostatStatus.Status["city"] = thermostat.Location.City;
 
                 // Status
                 thermostatStatus.Status["hvacMode"] = thermostat.Settings.HvacMode;
